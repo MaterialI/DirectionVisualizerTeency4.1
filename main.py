@@ -6,21 +6,13 @@ import serial
 import re
 import numpy as np
 import math
+import time
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
 
-port = serial.Serial('COM5')
-readouts= str(port.read(22))
+port = serial.Serial('COM5', 9600, timeout= 1)
+
 def setUp():
-    # Create a 3D plot
-    #try:
-    
-    #print(port)
-    readouts= port.read(22)
-    print(readouts)
-    #except:
-    
-    
     # Set the limits and labels of the plot
     ax.set_xlim([0, 1])
     ax.set_ylim([0, 1])
@@ -28,16 +20,12 @@ def setUp():
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
-
+    
 
 def decodeReadout(readout):
-    res = ""
-    print(type(readouts))
-    
     # res = readouts.decode('utf-8') #gyro readout encoding
-    print(readouts)
     pattern = r'-?\d+.\d+'
-    numbers = re.findall(pattern, readouts)
+    numbers = re.findall(pattern, readout)
     
     return numbers
 
@@ -46,15 +34,18 @@ def magnitude(vector):
     return math.sqrt(sum(pow(element, 2) for element in vector))
 
 def anim(i):
-        i*=22
-        readouts= str(port.read(22))
-        #readouts = readouts[2:]
+        
+        global readouts 
+        readouts = ''
+        readouts += port.read(port.inWaiting()).decode()
+        if '\n' in readouts:
+            buffer = readouts.split('\n')[-2:]
+        
         data = decodeReadout(readouts)
         print(data)
-
-        alpha = float(data[0]) #yaw 
-        beta = float(data[1]) #pitch 
-        gamma = float(data[2]) #roll
+        alpha = float(data[0])*0.0174533 #yaw 
+        beta = float(data[1])*0.0174533 #pitch 
+        gamma = float(data[2])*0.0174533 #roll
 
         # Define the starting point and direction of the arrow
         matrix = np.matrix(([np.cos(beta)*np.cos(gamma), np.sin(alpha)*np.sin(beta)*np.cos(gamma) - np.cos(alpha)*np.sin(gamma), np.cos(alpha)*np.sin(beta)*np.cos(gamma)+ np.sin(alpha)* np.sin(gamma)],
